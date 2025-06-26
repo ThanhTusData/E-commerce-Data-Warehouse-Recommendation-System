@@ -1,0 +1,47 @@
+# Chạy Docker:
+docker-compose up -d 
+
+# Kiểm tra các container trong Docker:
+docker ps 
+
+# Tạo SQL:
+docker exec -it mysql mysql --local-infile=1 -uroot -padmin olist -e "source /load_dataset_into_mysql/olist.sql"
+
+# Load SQL:
+docker exec -it mysql mysql --local-infile=1 -uroot -padmin olist -e "source /load_dataset_into_mysql/load_data.sql"
+
+# Kiểm tra SQL:
+docker exec -it mysql mysql -uroot -padmin -e "USE olist; SELECT COUNT(*) FROM customers;"
+
+# Xóa Connections:
+docker exec -it air-airflow-webserver-1 airflow connections delete 'mysql'
+docker exec -it air-airflow-webserver-1 airflow connections delete 'postgres'
+
+# Tạo Connections:
+docker exec -it air-airflow-webserver-1 airflow connections add 'mysql' --conn-uri 'mysql://admin:admin@mysql:3306/olist'
+docker exec -it air-airflow-webserver-1 airflow connections add 'postgres' --conn-uri 'postgresql://admin:admin@de_psql:5432/postgres?sslmode=disable'
+
+# Tạo schema trong PostgeSQL:
+docker exec -i de_psql psql -U admin -d postgres -c "CREATE SCHEMA IF NOT EXISTS staging; CREATE SCHEMA IF NOT EXISTS warehouse;"
+
+# Kiểm tra các schema:
+docker exec -i de_psql psql -U admin -d postgres -c "\dn"
+
+# Kiểm tra các bảng trong schema:
+docker exec -i de_psql psql -U admin -d postgres -c "\dt staging.*"
+
+# Tạo pool trong Airflow UI (pool để giới hạn số connection đồng thời):
+Vào Airflow Web UI
+Admin → Pools
+Click "+" để Add Pool
+Điền thông tin:
+Pool Name: mysql_pool
+Slots: 3 (cho phép 3 task chạy đồng thời)
+Description: MySQL connection pool
+Save
+
+# Kết nối Power BI
+Server: localhost:5433
+Database: postgres
+Username: admin
+Password: admin
